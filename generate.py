@@ -547,6 +547,39 @@ for fname, fdata in SCALE_FAMILIES.items():
     fdata["final_solid"] = final
 
 # ============================================================
+# SOURCE TAGGING: web (Cross + CSS vars) vs mobile (Core + user list)
+# ============================================================
+# Collect all web hex values: Cross colors existing_solid + web CSS variables
+WEB_HEXES = set()
+for _fn, _fd in SCALE_FAMILIES.items():
+    if "cross_name" in _fd:
+        for _s, _h in _fd.get("existing_solid", {}).items():
+            WEB_HEXES.add(_h.upper())
+# Web CSS variables (--ds-color-*)
+WEB_HEXES.update({
+    "#765FDE", "#634AD6", "#5137C7", "#EAE6FF",
+    "#DDd7FF",  # secondary-hover (solid part)
+    "#CEC6FF",  # secondary-active
+    "#2F2F45", "#FFFFFF",
+    "#87D34C", "#74C336", "#57A718", "#E7F6DB",
+    "#EA3117", "#D5260E", "#BB210C", "#FFEEEE",
+    "#F5F6F7", "#F1EFFC", "#D6CFF5", "#BBAFEF", "#9F8FE8",
+    "#FF6170", "#FF4B5C", "#FF3A4E",
+    # These overlap with Cross file but listed for completeness:
+    "#E5F7F6", "#B3E8E5", "#80D9D3", "#4CC9C2", "#00B2A8",
+    "#FFEFF1", "#FFD0D4", "#FFB0B8", "#FF909B",
+    "#FFFAEB", "#FEF0C5", "#FDE59E", "#FCDB76", "#FBCC3C",
+    "#EBF7FF", "#C4E7FF", "#9DD7FF", "#75C7FF", "#3AAFFF",
+    "#E7FAED", "#B7EECA", "#87E3A7", "#58D883", "#10C84E",
+    "#FFF3E7", "#FFDBB8", "#FFC388", "#FFAC58", "#FF8811",
+})
+
+def get_source(hex_val):
+    """Return 'web', 'mobile', or 'both'."""
+    in_web = hex_val.upper() in WEB_HEXES
+    return "web" if in_web else "mobile"
+
+# ============================================================
 # MATCHING: assign every legacy color to a family or Other or Unmatched
 # ============================================================
 
@@ -570,7 +603,7 @@ unmatched = []
 for lname, lhex, lnote in LEGACY:
     is_dup = "дубл" in lnote.lower() or "алиас" in lnote.lower()
     best, ref, delta = find_best(lhex)
-    entry = {"name": lname, "hex": lhex, "note": lnote, "delta": round(delta,1), "is_dup": is_dup, "ref": ref}
+    entry = {"name": lname, "hex": lhex, "note": lnote, "delta": round(delta,1), "is_dup": is_dup, "ref": ref, "source": get_source(lhex)}
 
     if best[0] == "scale":
         fname = best[1]
@@ -674,6 +707,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Ne
 .lg-n{font-weight:600;word-break:break-word}
 .lg-d{color:var(--t3);font-family:'SF Mono',Menlo,monospace;font-size:10px;margin-top:1px}
 .lg-far-tag{background:var(--o);color:#fff;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700;margin-left:4px}
+.src-tag{font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;margin-left:4px;white-space:nowrap}
+.src-tag.mob{background:#E8FAE6;color:#1B7A12}
+.src-tag.web{background:#E3F2FD;color:#0A5EB5}
 
 /* Alpha blocks — bigger */
 .al-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
@@ -837,7 +873,10 @@ for fname, fdata in SCALE_FAMILIES.items():
                     if si.get("step_de",0) >= 10: cls += " far"
                     de_lbl = "exact" if si.get("step_de",99)<0.1 else f'ΔE {si.get("step_de","?")}'
                     far_tag = '<span class="lg-far-tag">далёкий</span>' if si.get("step_de",0)>=10 else ""
-                    html += f'<div class="lg{cls}" title="{si["note"]}"><div class="lg-sw" style="background:{si["hex"]}"></div><div class="lg-body"><div class="lg-n">{si["name"]}</div><div class="lg-d">{si["hex"]} {de_lbl}{far_tag}</div></div></div>'
+                    src_cls = "web" if si.get("source")=="web" else "mob"
+                    src_lbl = "веб" if si.get("source")=="web" else "мобилка"
+                    src_tag = f'<span class="src-tag {src_cls}">{src_lbl}</span>'
+                    html += f'<div class="lg{cls}" title="{si["note"]}"><div class="lg-sw" style="background:{si["hex"]}"></div><div class="lg-body"><div class="lg-n">{si["name"]}{src_tag}</div><div class="lg-d">{si["hex"]} {de_lbl}{far_tag}</div></div></div>'
                 html += '</div>'
             html += '</div>\n'
         html += '</div></div>\n'
@@ -884,7 +923,10 @@ for fname, fdata in SCALE_FAMILIES.items():
                 if item["delta"]>=10: cls += " far"
                 de_lbl = "exact" if item["delta"]<0.1 else f'ΔE {item["delta"]}'
                 far_tag = '<span class="lg-far-tag">далёкий</span>' if item["delta"]>=10 else ""
-                html += f'<div class="lg{cls}"><div class="lg-sw" style="background:{item["hex"]}"></div><div class="lg-body"><div class="lg-n">{item["name"]}</div><div class="lg-d">{item["hex"]} {de_lbl}{far_tag}</div></div></div>'
+                src_cls = "web" if item.get("source")=="web" else "mob"
+                src_lbl = "веб" if item.get("source")=="web" else "мобилка"
+                src_tag = f'<span class="src-tag {src_cls}">{src_lbl}</span>'
+                html += f'<div class="lg{cls}"><div class="lg-sw" style="background:{item["hex"]}"></div><div class="lg-body"><div class="lg-n">{item["name"]}{src_tag}</div><div class="lg-d">{item["hex"]} {de_lbl}{far_tag}</div></div></div>'
             html += '</div></div>\n'
 
     html += '</div>\n\n'
@@ -903,7 +945,10 @@ for tname, thex in OTHER_TOKENS.items():
             if it["delta"]>=10: cls += " far"
             de_lbl = "exact" if it["delta"]<0.1 else f'ΔE {it["delta"]}'
             far_tag = '<span class="lg-far-tag">далёкий</span>' if it["delta"]>=10 else ""
-            html += f'<div class="lg{cls}"><div class="lg-sw" style="background:{it["hex"]}"></div><div class="lg-body"><div class="lg-n">{it["name"]}</div><div class="lg-d">{it["hex"]} {de_lbl}{far_tag}</div></div></div>'
+            src_cls = "web" if it.get("source")=="web" else "mob"
+            src_lbl = "веб" if it.get("source")=="web" else "мобилка"
+            src_tag = f'<span class="src-tag {src_cls}">{src_lbl}</span>'
+            html += f'<div class="lg{cls}"><div class="lg-sw" style="background:{it["hex"]}"></div><div class="lg-body"><div class="lg-n">{it["name"]}{src_tag}</div><div class="lg-d">{it["hex"]} {de_lbl}{far_tag}</div></div></div>'
         html += '</div>'
     html += '</div>'
 html += '</div></div></div>\n\n'
@@ -923,7 +968,10 @@ if all_far:
     html += '<div class="fam" style="border-left:4px solid var(--rd)"><div class="sc"><div class="sc-lbl" style="color:var(--rd)">Требуют отдельного решения</div>'
     html += '<div class="lg-list">'
     for item in all_far:
-        html += f'<div class="lg far"><div class="lg-sw" style="background:{item["hex"]}"></div><div class="lg-body"><div class="lg-n">{item["name"]}</div><div class="lg-d">{item["hex"]} ΔE {item["delta"]}<span class="lg-far-tag">ΔE≥15</span></div></div></div>'
+        src_cls = "web" if item.get("source")=="web" else "mob"
+        src_lbl = "веб" if item.get("source")=="web" else "мобилка"
+        src_tag = f'<span class="src-tag {src_cls}">{src_lbl}</span>'
+        html += f'<div class="lg far"><div class="lg-sw" style="background:{item["hex"]}"></div><div class="lg-body"><div class="lg-n">{item["name"]}{src_tag}</div><div class="lg-d">{item["hex"]} ΔE {item["delta"]}<span class="lg-far-tag">ΔE≥15</span></div></div></div>'
     html += '</div></div></div>\n'
 
 html += '</div></div>\n\n'  # close .c and #tab-analysis
